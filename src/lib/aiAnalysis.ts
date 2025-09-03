@@ -2,9 +2,14 @@ import OpenAI from 'openai';
 import { AIAnalysisResult, AnalysisType } from '@/types';
 import { detectLanguage } from './languageDetection';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI client only if API key is available
+let openai: OpenAI | null = null;
+
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 interface AIAnalysisInput {
   resumeText: string;
@@ -23,7 +28,7 @@ export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnal
     throw new Error('AI analysis only available for AI_POWERED analysis type');
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!openai) {
     throw new Error('OpenAI API key not configured');
   }
 

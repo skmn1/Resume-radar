@@ -30,8 +30,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     // Check for existing token on mount
     const savedToken = localStorage.getItem('resumeRadarToken');
     const savedUser = localStorage.getItem('resumeRadarUser');
@@ -48,7 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     setLoading(false);
-  }, []);
+  }, [mounted]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -65,8 +72,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (data.success) {
         setUser(data.user);
         setToken(data.token);
-        localStorage.setItem('resumeRadarToken', data.token);
-        localStorage.setItem('resumeRadarUser', JSON.stringify(data.user));
+        if (mounted) {
+          localStorage.setItem('resumeRadarToken', data.token);
+          localStorage.setItem('resumeRadarUser', JSON.stringify(data.user));
+        }
         return { success: true };
       } else {
         return { success: false, message: data.message };
@@ -91,8 +100,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (data.success) {
         setUser(data.user);
         setToken(data.token);
-        localStorage.setItem('resumeRadarToken', data.token);
-        localStorage.setItem('resumeRadarUser', JSON.stringify(data.user));
+        if (mounted) {
+          localStorage.setItem('resumeRadarToken', data.token);
+          localStorage.setItem('resumeRadarUser', JSON.stringify(data.user));
+        }
         return { success: true };
       } else {
         return { success: false, message: data.message };
@@ -105,9 +116,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('resumeRadarToken');
-    localStorage.removeItem('resumeRadarUser');
+    if (mounted) {
+      localStorage.removeItem('resumeRadarToken');
+      localStorage.removeItem('resumeRadarUser');
+    }
   };
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <AuthContext.Provider value={{
+        user: null,
+        token: null,
+        login: async () => ({ success: false, message: 'Loading...' }),
+        register: async () => ({ success: false, message: 'Loading...' }),
+        logout: () => {},
+        loading: true
+      }}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{
