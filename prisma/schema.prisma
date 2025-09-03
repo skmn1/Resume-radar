@@ -11,34 +11,125 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String?
+  role        UserRole @default(USER)
+  language    String   @default("en")
+  isActive    Boolean  @default(true)
+  lastLoginAt DateTime?
+  failedLoginAttempts Int @default(0)
+  lockedUntil DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  analyses Analysis[]
+  analyses    Analysis[]
+  systemSettings SystemSettings[]
 
   @@map("users")
 }
 
+enum UserRole {
+  USER
+  HR_ADMIN
+  SUPER_ADMIN
+}
+
 model Analysis {
-  id                String   @id @default(cuid())
-  userId            String
-  filename          String
-  jobDescription    String?
-  overallScore      Float
-  keywordScore      Float
-  formattingScore   Float
-  readabilityScore  Float
-  actionVerbScore   Float
-  suggestions       String   // JSON string of suggestions
-  keywordsFound     String   // JSON string of keywords found
-  keywordsMissing   String   // JSON string of missing keywords
-  createdAt         DateTime @default(now())
+  id                    String      @id @default(cuid())
+  userId                String
+  filename              String
+  jobDescription        String?
+  analysisType          AnalysisType @default(STANDARD)
+  language              String      @default("en")
+  
+  // Legacy scoring (for backwards compatibility)
+  overallScore          Float
+  keywordScore          Float
+  formattingScore       Float
+  readabilityScore      Float
+  actionVerbScore       Float
+  suggestions           String      // JSON string of suggestions
+  keywordsFound         String      // JSON string of keywords found
+  keywordsMissing       String      // JSON string of missing keywords
+  
+  // Enhanced AI analysis fields
+  aiAnalysisResult      String?     // JSON string of AI analysis
+  fitScore             Int?        // 0-100 score
+  overallRemark        String?     // AI overall assessment
+  skillGaps            String?     // JSON array of missing skills
+  coverLetterDraft     String?     // Generated cover letter
+  
+  // Metadata
+  fileSize             Int?
+  processingTimeMs     Int?
+  errorMessage         String?
+  
+  createdAt            DateTime    @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("analyses")
+}
+
+enum AnalysisType {
+  STANDARD
+  AI_POWERED
+}
+
+model SystemSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   // JSON value
+  description String?
+  category    String   @default("general")
+  isPublic    Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@map("system_settings")
+}
+
+model Keywords {
+  id          String   @id @default(cuid())
+  keyword     String   @unique
+  category    String   // e.g., "technical", "soft_skills", "industry"
+  weight      Float    @default(1.0)
+  synonyms    String   // JSON array of synonyms
+  language    String   @default("en")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("keywords")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String   // e.g., "LOGIN", "ANALYSIS_CREATED", "USER_CREATED"
+  resource    String?  // e.g., "user:123", "analysis:456"
+  details     String?  // JSON details
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model RateLimits {
+  id          String   @id @default(cuid())
+  identifier  String   // IP address or user ID
+  action      String   // e.g., "LOGIN", "ANALYSIS"
+  count       Int      @default(1)
+  windowStart DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([identifier, action, windowStart])
+  @@map("rate_limits")
 }

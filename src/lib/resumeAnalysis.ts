@@ -1,6 +1,15 @@
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
-import { Suggestion, KeywordMatch, FormattingIssue } from '@/types';
+import { Analysis, Suggestion, KeywordMatch, FormattingIssue, AnalysisType, AIAnalysisResult } from '@/types';
+import { generateAIAnalysis, generateStandardAnalysis } from './aiAnalysis';
+import { detectLanguage, detectMixedLanguages } from './languageDetection';
+
+interface AnalysisInput {
+  text: string;
+  jobDescription?: string;
+  analysisType?: AnalysisType;
+  language?: string;
+}
 
 // Common tech keywords and action verbs
 const TECH_KEYWORDS = [
@@ -332,37 +341,68 @@ function getFormattingSuggestion(issueType: string): string {
 }
 
 /**
- * Main function to analyze a resume
+ * Main function to analyze a resume with enhanced AI capabilities
  */
 export async function analyzeResume(
   fileBuffer: Buffer,
   filename: string,
-  jobDescription?: string
-): Promise<{
-  overallScore: number;
-  keywordScore: number;
-  formattingScore: number;
-  readabilityScore: number;
-  actionVerbScore: number;
-  suggestions: Suggestion[];
-  keywordsFound: string[];
-  keywordsMissing: string[];
-}> {
+  jobDescription?: string,
+  analysisType: AnalysisType = AnalysisType.STANDARD,
+  language?: string
+): Promise<Omit<Analysis, 'id' | 'userId' | 'createdAt'>> {
+  const startTime = Date.now();
+
   try {
     // Parse the resume file
     const resumeText = await parseFile(fileBuffer, filename);
     
-    // Extract target keywords from job description
+    if (!resumeText || resumeText.trim().length === 0) {
+      throw new Error('No text content found in resume');
+    }
+
+    // Detect language
+    const languageDetection = detectLanguage(resumeText);
+    const detectedLanguage = language || languageDetection.language;
+    const mixedLanguages = detectMixedLanguages(resumeText);
+
+    // Generate AI analysis if requested
+    let aiAnalysisResult: AIAnalysisResult | undefined;
+    let fitScore: number | undefined;
+    let overallRemark: string | undefined;
+    let skillGaps: string[] | undefined;
+    let coverLetterDraft: string | undefined;
+
+    if (analysisType === AnalysisType.AI_POWERED) {
+      try {
+        aiAnalysisResult = await generateAIAnalysis({
+          resumeText,
+          jobDescription,
+          language: detectedLanguage,
+          analysisType
+        });
+        
+        fitScore = aiAnalysisResult.fitScore;
+        overallRemark = aiAnalysisResult.overallRemark;
+        skillGaps = aiAnalysisResult.skillGaps;
+        coverLetterDraft = aiAnalysisResult.coverLetterDraft;
+      } catch (aiError) {
+        console.error('AI analysis failed, falling back to standard analysis:', aiError);
+        // Fall back to standard analysis
+        aiAnalysisResult = generateStandardAnalysis(resumeText, jobDescription);
+        fitScore = aiAnalysisResult.fitScore;
+        overallRemark = aiAnalysisResult.overallRemark;
+      }
+    }
+
+    // Always perform standard analysis for backwards compatibility
     const targetKeywords = jobDescription ? extractJobKeywords(jobDescription) : TECH_KEYWORDS;
-    
-    // Perform analysis
     const keywordMatches = analyzeKeywords(resumeText, targetKeywords);
     const formattingIssues = analyzeFormatting(resumeText);
     const readabilityScore = calculateReadabilityScore(resumeText);
     const actionVerbAnalysis = analyzeActionVerbs(resumeText);
     
     // Calculate scores
-    const keywordScore = keywordMatches.filter(k => k.found).length / keywordMatches.length;
+    const keywordScore = keywordMatches.filter(k => k.found).length / Math.max(keywordMatches.length, 1);
     const formattingScore = Math.max(0, 1 - (formattingIssues.length * 0.1));
     const actionVerbScore = actionVerbAnalysis.score;
     
@@ -373,7 +413,7 @@ export async function analyzeResume(
       readabilityScore * 0.2 +
       actionVerbScore * 0.1
     );
-    
+
     // Generate suggestions
     const suggestions = generateSuggestions(
       keywordMatches,
@@ -381,8 +421,16 @@ export async function analyzeResume(
       readabilityScore,
       actionVerbAnalysis
     );
-    
+
+    const processingTime = Date.now() - startTime;
+
     return {
+      filename,
+      jobDescription,
+      analysisType,
+      language: detectedLanguage,
+      
+      // Legacy scoring
       overallScore,
       keywordScore,
       formattingScore,
@@ -390,9 +438,44 @@ export async function analyzeResume(
       actionVerbScore,
       suggestions,
       keywordsFound: keywordMatches.filter(k => k.found).map(k => k.keyword),
-      keywordsMissing: keywordMatches.filter(k => !k.found).map(k => k.keyword)
+      keywordsMissing: keywordMatches.filter(k => !k.found).map(k => k.keyword),
+      
+      // Enhanced AI analysis
+      aiAnalysisResult,
+      fitScore,
+      overallRemark,
+      skillGaps,
+      coverLetterDraft,
+      
+      // Metadata
+      processingTimeMs: processingTime,
+      errorMessage: mixedLanguages.length > 1 
+        ? `Mixed languages detected: ${mixedLanguages.join(', ')}. Analysis performed in ${detectedLanguage}.`
+        : undefined
     };
   } catch (error) {
-    throw new Error(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const processingTime = Date.now() - startTime;
+    
+    console.error('Resume analysis failed:', error);
+    
+    // Return minimal analysis with error
+    return {
+      filename,
+      jobDescription,
+      analysisType,
+      language: language || 'en',
+      
+      overallScore: 0,
+      keywordScore: 0,
+      formattingScore: 0,
+      readabilityScore: 0,
+      actionVerbScore: 0,
+      suggestions: [],
+      keywordsFound: [],
+      keywordsMissing: [],
+      
+      processingTimeMs: processingTime,
+      errorMessage: `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
   }
 }

@@ -116,8 +116,26 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-400 text-center md:text-left">
-              The ultimate ATS resume checker for job seekers
+              The ultimate ATS & Career AI Assistant
             </p>
+          </div>
+
+          {/* Copyright and Developer */}
+          <div className="flex flex-col items-center md:items-end space-y-2">
+            <div className="text-sm text-slate-600 dark:text-slate-400 text-center md:text-right">
+              © 2025 ResumeRadar. All Rights Reserved.
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              Developed by{' '}
+              <a
+                href="https://portfolio.dr-kamnis.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+              >
+                Dr. Kamni Soulimane
+              </a>
+            </div>
           </div>
 
           {/* Links */}
@@ -126,7 +144,8 @@ export const Footer: React.FC = () => {
               href="https://github.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              title="GitHub"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -140,7 +159,8 @@ export const Footer: React.FC = () => {
               href="https://linkedin.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              title="LinkedIn"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -150,11 +170,6 @@ export const Footer: React.FC = () => {
                 />
               </svg>
             </a>
-          </div>
-
-          {/* Created by */}
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            Created by <span className="font-medium">Your Name</span>
           </div>
         </div>
       </div>
