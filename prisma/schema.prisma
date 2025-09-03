@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analyses Analysis[]
+
+  @@map("users")
+}
+
+model Analysis {
+  id                String   @id @default(cuid())
+  userId            String
+  filename          String
+  jobDescription    String?
+  overallScore      Float
+  keywordScore      Float
+  formattingScore   Float
+  readabilityScore  Float
+  actionVerbScore   Float
+  suggestions       String   // JSON string of suggestions
+  keywordsFound     String   // JSON string of keywords found
+  keywordsMissing   String   // JSON string of missing keywords
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("analyses")
+}
