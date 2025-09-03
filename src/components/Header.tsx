@@ -128,7 +128,7 @@ export const Footer: React.FC = () => {
             <div className="text-sm text-slate-600 dark:text-slate-400">
               Developed by{' '}
               <a
-                href="https://portfolio.dr-kamnis.com"
+                href="http://portfolio.dr-kamnis.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
