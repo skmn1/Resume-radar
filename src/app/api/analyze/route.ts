@@ -80,12 +80,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if AI analysis is requested but not available (e.g., no OpenAI key)
-    if (analysisType === AnalysisType.AI_POWERED && !process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { success: false, message: 'AI analysis is not available. Please use standard analysis.' },
-        { status: 400 }
-      );
+    // Check if AI analysis is requested but not available
+    if (analysisType === AnalysisType.AI_POWERED) {
+      try {
+        const { LLMFactory } = await import('@/lib/llm');
+        const activeClient = await LLMFactory.getActiveClient();
+        if (!activeClient.isConfigured()) {
+          return NextResponse.json(
+            { success: false, message: 'AI analysis is not available. Please use standard analysis.' },
+            { status: 400 }
+          );
+        }
+      } catch (error) {
+        console.error('LLM client check error:', error);
+        return NextResponse.json(
+          { success: false, message: 'AI analysis is not available. Please use standard analysis.' },
+          { status: 400 }
+        );
+      }
     }
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());

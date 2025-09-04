@@ -25,10 +25,13 @@ export async function GET(
       );
     }
 
+    // Await params before accessing properties (Next.js 15 requirement)
+    const { id } = await params;
+
     // Get specific analysis
     const analysis = await prisma.analysis.findFirst({
       where: {
-        id: params.id,
+        id: id,
         userId: decoded.userId
       }
     });

@@ -133,3 +133,23 @@ model RateLimits {
   @@unique([identifier, action, windowStart])
   @@map("rate_limits")
 }
+
+model LLMProvider {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "openai", "gemini"
+  displayName String   // e.g., "OpenAI GPT-4o-mini", "Google Gemini 1.0 Pro"
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  config      String   // JSON configuration (model name, temperature, etc.)
+  apiKeyEnvVar String  // Environment variable name for API key
+  
+  // Metrics
+  totalUsage  Int      @default(0)
+  avgResponseTime Float? // in milliseconds
+  lastUsedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("llm_providers")
+}
