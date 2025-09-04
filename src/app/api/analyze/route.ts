@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { analyzeResume } from '@/lib/resumeAnalysis';
+import { analyzeResume, analyzeResumeWithProgress } from '@/lib/resumeAnalysis';
 import { requireAuth, createAuditLog, checkRateLimit } from '@/lib/rbac';
 import { AnalysisType, UserRole } from '@/types';
+import { ProgressTracker } from '../analysis-progress/[id]/route';
 
 export async function POST(request: NextRequest) {
   try {
@@ -102,77 +103,111 @@ export async function POST(request: NextRequest) {
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     
-    // Perform analysis
-    const analysisResult = await analyzeResume(
-      fileBuffer, 
-      file.name, 
-      jobDescription, 
-      analysisType as AnalysisType,
-      language
-    );
-
-    // Save analysis to database
+    // Create a temporary analysis record to get an ID for progress tracking
     const analysis = await prisma.analysis.create({
       data: {
         userId: user.id,
         filename: file.name,
         jobDescription: jobDescription || null,
         analysisType: analysisType as AnalysisType,
-        language: analysisResult.language,
+        language: language || 'en',
         
-        // Legacy fields
-        overallScore: analysisResult.overallScore,
-        keywordScore: analysisResult.keywordScore,
-        formattingScore: analysisResult.formattingScore,
-        readabilityScore: analysisResult.readabilityScore,
-        actionVerbScore: analysisResult.actionVerbScore,
-        suggestions: JSON.stringify(analysisResult.suggestions),
-        keywordsFound: JSON.stringify(analysisResult.keywordsFound),
-        keywordsMissing: JSON.stringify(analysisResult.keywordsMissing),
-        
-        // Enhanced fields
-        aiAnalysisResult: analysisResult.aiAnalysisResult ? JSON.stringify(analysisResult.aiAnalysisResult) : null,
-        fitScore: analysisResult.fitScore,
-        overallRemark: analysisResult.overallRemark,
-        skillGaps: analysisResult.skillGaps ? JSON.stringify(analysisResult.skillGaps) : null,
-        coverLetterDraft: analysisResult.coverLetterDraft,
-        
-        // Metadata
+        // Temporary placeholder values
+        overallScore: 0,
+        keywordScore: 0,
+        formattingScore: 0,
+        readabilityScore: 0,
+        actionVerbScore: 0,
+        suggestions: '[]',
+        keywordsFound: '[]',
+        keywordsMissing: '[]',
         fileSize: file.size,
-        processingTimeMs: analysisResult.processingTimeMs,
-        errorMessage: analysisResult.errorMessage
+        processingTimeMs: 0
       }
     });
 
-    // Create audit log
-    await createAuditLog(
-      user, 
-      'ANALYSIS_CREATED', 
-      `analysis:${analysis.id}`, 
-      { 
-        analysisType, 
-        filename: file.name, 
-        fileSize: file.size,
-        processingTime: analysisResult.processingTimeMs 
-      }, 
-      request
-    );
-
-    // Parse JSON fields for response
-    const responseAnalysis = {
-      ...analysis,
-      suggestions: JSON.parse(analysis.suggestions),
-      keywordsFound: JSON.parse(analysis.keywordsFound),
-      keywordsMissing: JSON.parse(analysis.keywordsMissing),
-      aiAnalysisResult: analysis.aiAnalysisResult ? JSON.parse(analysis.aiAnalysisResult) : null,
-      skillGaps: analysis.skillGaps ? JSON.parse(analysis.skillGaps) : null
-    };
-
-    return NextResponse.json({
+    // Initialize progress tracker
+    const progressTracker = new ProgressTracker(analysis.id);
+    
+    // Return the analysis ID immediately so frontend can start polling
+    const response = NextResponse.json({
       success: true,
-      analysis: responseAnalysis,
-      processingTimeMs: analysisResult.processingTimeMs
+      analysis: { id: analysis.id },
+      message: 'Analysis started'
     });
+
+    // Start the actual analysis in the background
+    setImmediate(async () => {
+      try {
+        progressTracker.updateProgress('Starting analysis...', 10, 0);
+        
+        // Perform analysis with progress tracking
+        const analysisResult = await analyzeResumeWithProgress(
+          fileBuffer, 
+          file.name, 
+          jobDescription, 
+          analysisType as AnalysisType,
+          language,
+          progressTracker
+        );
+
+        progressTracker.updateProgress('Saving results...', 95, 4);
+
+        // Update analysis with real results
+        await prisma.analysis.update({
+          where: { id: analysis.id },
+          data: {
+            language: analysisResult.language,
+            
+            // Legacy fields
+            overallScore: analysisResult.overallScore,
+            keywordScore: analysisResult.keywordScore,
+            formattingScore: analysisResult.formattingScore,
+            readabilityScore: analysisResult.readabilityScore,
+            actionVerbScore: analysisResult.actionVerbScore,
+            suggestions: JSON.stringify(analysisResult.suggestions),
+            keywordsFound: JSON.stringify(analysisResult.keywordsFound),
+            keywordsMissing: JSON.stringify(analysisResult.keywordsMissing),
+            
+            // Enhanced fields
+            aiAnalysisResult: analysisResult.aiAnalysisResult ? JSON.stringify(analysisResult.aiAnalysisResult) : null,
+            fitScore: analysisResult.fitScore,
+            overallRemark: analysisResult.overallRemark,
+            skillGaps: analysisResult.skillGaps ? JSON.stringify(analysisResult.skillGaps) : null,
+            coverLetterDraft: analysisResult.coverLetterDraft,
+            
+            // Metadata
+            processingTimeMs: analysisResult.processingTimeMs,
+            errorMessage: analysisResult.errorMessage
+          }
+        });
+
+        progressTracker.setCompleted();
+
+        // Create audit log
+        await createAuditLog(
+          user, 
+          'ANALYSIS_CREATED', 
+          `Analysis completed for ${file.name} using ${analysisType}`,
+          { analysisId: analysis.id, filename: file.name, analysisType }
+        );
+
+      } catch (error) {
+        console.error('Background analysis error:', error);
+        progressTracker.setFailed(error instanceof Error ? error.message : 'Unknown error');
+        
+        // Update analysis with error
+        await prisma.analysis.update({
+          where: { id: analysis.id },
+          data: {
+            errorMessage: error instanceof Error ? error.message : 'Analysis failed',
+            processingTimeMs: Date.now() - progressTracker.getStartTime()
+          }
+        });
+      }
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Analysis error:', error);

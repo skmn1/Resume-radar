@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import FileUpload from '@/components/FileUpload';
+import AnalysisProgress from '@/components/AnalysisProgress';
 import { Button, Card, CardHeader, CardContent, LoadingSpinner } from '@/components/ui';
 import { AnalysisType, Analysis } from '@/types';
 
@@ -17,6 +18,16 @@ export default function DashboardPage() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Progress tracking state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState({
+    progress: 0,
+    currentStep: 'Initializing...',
+    estimatedTimeRemaining: 0
+  });
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   const { user, token } = useAuth();
   const router = useRouter();
 
@@ -29,7 +40,7 @@ export default function DashboardPage() {
     fetchAnalysisHistory();
   }, [user, token, router]);
 
-  const fetchAnalysisHistory = async () => {
+    const fetchAnalysisHistory = async () => {
     if (!token) return;
     
     try {
@@ -39,19 +50,91 @@ export default function DashboardPage() {
         }
       });
       
-      const data = await response.json();
-      if (data.success) {
-        setAnalyses(data.analyses);
-      } else {
-        setError(data.message || 'Failed to fetch analysis history');
+      if (response.ok) {
+        const data = await response.json();
+        setAnalyses(data.analyses || []);
       }
     } catch (error) {
-      console.error('Failed to fetch analysis history:', error);
+      console.error('Error fetching analysis history:', error);
       setError('Network error while fetching history');
     } finally {
       setLoadingHistory(false);
     }
   };
+
+  // Polling function for analysis progress
+  const pollAnalysisProgress = async (analysisId: string) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`/api/analysis-progress/${analysisId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.progress) {
+          const { progress, currentStep, status, estimatedCompletionTime } = data.progress;
+          
+          setAnalysisProgress({
+            progress,
+            currentStep,
+            estimatedTimeRemaining: estimatedCompletionTime ? estimatedCompletionTime - Date.now() : 0
+          });
+
+          // If analysis is completed, stop polling and redirect
+          if (status === 'completed') {
+            clearInterval(pollingIntervalRef.current!);
+            setIsAnalyzing(false);
+            setLoading(false);
+            
+            // Refresh analysis history
+            await fetchAnalysisHistory();
+            
+            // Navigate to results
+            router.push(`/results/${analysisId}`);
+          } else if (status === 'failed') {
+            clearInterval(pollingIntervalRef.current!);
+            setIsAnalyzing(false);
+            setLoading(false);
+            setError('Analysis failed. Please try again.');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error polling analysis progress:', error);
+    }
+  };
+
+  // Start polling for progress updates
+  const startProgressPolling = (analysisId: string) => {
+    setCurrentAnalysisId(analysisId);
+    setIsAnalyzing(true);
+    setAnalysisProgress({
+      progress: 0,
+      currentStep: 'Starting analysis...',
+      estimatedTimeRemaining: 0
+    });
+
+    // Poll every 2 seconds
+    pollingIntervalRef.current = setInterval(() => {
+      pollAnalysisProgress(analysisId);
+    }, 2000);
+
+    // Also poll immediately
+    pollAnalysisProgress(analysisId);
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleUpload = async (file: File, jobDescription?: string, analysisType?: AnalysisType) => {
     if (!token) return;
@@ -65,7 +148,8 @@ export default function DashboardPage() {
       if (jobDescription) {
         formData.append('jobDescription', jobDescription);
       }
-      formData.append('analysisType', analysisType || AnalysisType.STANDARD);
+      // Ensure we always send AI_POWERED as default (fixing the original bug)
+      formData.append('analysisType', analysisType || AnalysisType.AI_POWERED);
       
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -78,14 +162,15 @@ export default function DashboardPage() {
       const data = await response.json();
       
       if (data.success) {
-        router.push(`/results/${data.analysis.id}`);
+        // Start progress polling with the returned analysis ID
+        startProgressPolling(data.analysis.id);
       } else {
         setError(data.message || 'Analysis failed');
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Analysis error:', error);
-      setError('Network error. Please try again.');
-    } finally {
+      console.error('Upload error:', error);
+      setError('Upload failed. Please try again.');
       setLoading(false);
     }
   };
@@ -160,7 +245,22 @@ export default function DashboardPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Upload Section */}
           <div className="lg:col-span-2">
-            <FileUpload onUpload={handleUpload} isUploading={loading} />
+            {isAnalyzing ? (
+              <div className="space-y-6">
+                <AnalysisProgress 
+                  progress={analysisProgress.progress}
+                  currentStep={analysisProgress.currentStep}
+                  estimatedTimeRemaining={analysisProgress.estimatedTimeRemaining}
+                />
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Please wait while we analyze your resume. This may take a few minutes.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <FileUpload onUpload={handleUpload} isUploading={loading} />
+            )}
           </div>
 
           {/* Analysis History */}

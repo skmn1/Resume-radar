@@ -4,6 +4,11 @@ import { Analysis, Suggestion, KeywordMatch, FormattingIssue, AnalysisType, AIAn
 import { generateAIAnalysis, generateStandardAnalysis } from './aiAnalysis';
 import { detectLanguage, detectMixedLanguages } from './languageDetection';
 
+// Import ProgressTracker type
+interface ProgressTracker {
+  updateProgress(step: string, progress: number, currentStepIndex?: number): void;
+}
+
 interface AnalysisInput {
   text: string;
   jobDescription?: string;
@@ -462,6 +467,146 @@ export async function analyzeResume(
     return {
       filename,
       jobDescription,
+      analysisType,
+      language: language || 'en',
+      
+      overallScore: 0,
+      keywordScore: 0,
+      formattingScore: 0,
+      readabilityScore: 0,
+      actionVerbScore: 0,
+      suggestions: [],
+      keywordsFound: [],
+      keywordsMissing: [],
+      
+      processingTimeMs: processingTime,
+      errorMessage: `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+  }
+}
+
+/**
+ * Enhanced version of analyzeResume with progress tracking
+ */
+export async function analyzeResumeWithProgress(
+  fileBuffer: Buffer,
+  filename: string,
+  jobDescription?: string,
+  analysisType: AnalysisType = AnalysisType.STANDARD,
+  language?: string,
+  progressTracker?: ProgressTracker
+): Promise<Omit<Analysis, 'id' | 'userId' | 'createdAt'>> {
+  const startTime = Date.now();
+
+  try {
+    // Step 1: Parse the resume file (20%)
+    progressTracker?.updateProgress('Parsing resume file...', 20, 0);
+    const resumeText = await parseFile(fileBuffer, filename);
+    
+    if (!resumeText || resumeText.trim().length === 0) {
+      throw new Error('No text content found in resume');
+    }
+
+    // Step 2: Language detection (30%)
+    progressTracker?.updateProgress('Detecting language and analyzing content...', 30, 1);
+    const languageDetection = detectLanguage(resumeText);
+    const detectedLanguage = language || languageDetection.language;
+    const mixedLanguages = detectMixedLanguages(resumeText);
+
+    // Step 3: Content analysis (50%)
+    progressTracker?.updateProgress('Analyzing content structure...', 50, 2);
+    
+    // Generate AI analysis if requested
+    let aiAnalysisResult: AIAnalysisResult | undefined;
+    let fitScore: number | undefined;
+    let overallRemark: string | undefined;
+    let skillGaps: string[] | undefined;
+    let coverLetterDraft: string | undefined;
+
+    if (analysisType === AnalysisType.AI_POWERED) {
+      // Step 4: AI Processing (80%)
+      progressTracker?.updateProgress('Processing with AI analysis...', 80, 3);
+      
+      try {
+        aiAnalysisResult = await generateAIAnalysis({
+          resumeText,
+          jobDescription,
+          language: detectedLanguage,
+          analysisType
+        });
+        
+        fitScore = aiAnalysisResult.fitScore;
+        overallRemark = aiAnalysisResult.overallRemark;
+        skillGaps = aiAnalysisResult.skillGaps;
+        coverLetterDraft = aiAnalysisResult.coverLetterDraft;
+      } catch (error) {
+        console.error('AI analysis failed, falling back to standard analysis:', error);
+        progressTracker?.updateProgress('AI analysis failed, using standard analysis...', 80, 3);
+        
+        const standardResult = generateStandardAnalysis(resumeText, jobDescription);
+        aiAnalysisResult = standardResult;
+        fitScore = standardResult.fitScore;
+        overallRemark = standardResult.overallRemark;
+        skillGaps = standardResult.skillGaps;
+      }
+    }
+
+    // Standard analysis components
+    const targetKeywords = jobDescription ? extractJobKeywords(jobDescription) : TECH_KEYWORDS.slice(0, 10);
+    const keywordMatches = analyzeKeywords(resumeText, targetKeywords);
+    const formattingIssues = analyzeFormatting(resumeText);
+    const readabilityScore = calculateReadabilityScore(resumeText);
+    const actionVerbAnalysis = analyzeActionVerbs(resumeText);
+
+    // Calculate scores
+    const keywordScore = keywordMatches.filter(k => k.found).length / keywordMatches.length;
+    const formattingScore = Math.max(0, 1 - (formattingIssues.length * 0.1));
+    const actionVerbScore = actionVerbAnalysis.score;
+    const overallScore = (keywordScore + formattingScore + readabilityScore + actionVerbScore) / 4;
+
+    // Generate suggestions
+    const suggestions = generateSuggestions(keywordMatches, formattingIssues, readabilityScore, actionVerbAnalysis);
+
+    const processingTime = Date.now() - startTime;
+
+    // Step 5: Compiling results (90%)
+    progressTracker?.updateProgress('Compiling results...', 90, 4);
+
+    return {
+      filename,
+      jobDescription: jobDescription || undefined,
+      analysisType,
+      language: detectedLanguage,
+      
+      overallScore: Math.round(overallScore * 100),
+      keywordScore: Math.round(keywordScore * 100),
+      formattingScore: Math.round(formattingScore * 100),
+      readabilityScore: Math.round(readabilityScore * 100),
+      actionVerbScore: Math.round(actionVerbScore * 100),
+      
+      suggestions,
+      keywordsFound: keywordMatches.filter(k => k.found).map(k => k.keyword),
+      keywordsMissing: keywordMatches.filter(k => !k.found).map(k => k.keyword),
+      
+      // Enhanced fields from AI analysis
+      aiAnalysisResult,
+      fitScore,
+      overallRemark,
+      skillGaps,
+      coverLetterDraft,
+      
+      processingTimeMs: processingTime
+    };
+
+  } catch (error) {
+    console.error('Resume analysis error:', error);
+    const processingTime = Date.now() - startTime;
+    
+    progressTracker?.updateProgress('Analysis failed', 0, undefined);
+    
+    return {
+      filename,
+      jobDescription: jobDescription || undefined,
       analysisType,
       language: language || 'en',
       
