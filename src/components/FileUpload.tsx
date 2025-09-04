@@ -11,7 +11,7 @@ interface FileUploadProps {
 
 function EnhancedFileUpload({ onUpload, isUploading }: FileUploadProps) {
   const [jobDescription, setJobDescription] = useState('');
-  const [analysisType, setAnalysisType] = useState<AnalysisType>(AnalysisType.STANDARD);
+  const [analysisType, setAnalysisType] = useState<AnalysisType>(AnalysisType.AI_POWERED);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
