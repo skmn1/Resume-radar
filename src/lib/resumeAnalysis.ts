@@ -578,11 +578,11 @@ export async function analyzeResumeWithProgress(
       analysisType,
       language: detectedLanguage,
       
-      overallScore: Math.round(overallScore * 100),
-      keywordScore: Math.round(keywordScore * 100),
-      formattingScore: Math.round(formattingScore * 100),
-      readabilityScore: Math.round(readabilityScore * 100),
-      actionVerbScore: Math.round(actionVerbScore * 100),
+      overallScore,
+      keywordScore,
+      formattingScore,
+      readabilityScore,
+      actionVerbScore,
       
       suggestions,
       keywordsFound: keywordMatches.filter(k => k.found).map(k => k.keyword),

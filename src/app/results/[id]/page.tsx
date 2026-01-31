@@ -82,6 +82,16 @@ export default function ResultsPage() {
     }
   };
 
+  const getAnalysisTypeDisplay = (type: string) => {
+    return type === 'AI_POWERED' ? 'AI-Powered' : 'Standard';
+  };
+
+  const getAnalysisTypeBadge = (type: string) => {
+    return type === 'AI_POWERED' 
+      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+      : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+  };
+
   if (!user) {
     return null; // Will redirect in useEffect
   }
@@ -122,9 +132,14 @@ export default function ResultsPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                Resume Analysis Results
-              </h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                  Resume Analysis Results
+                </h1>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getAnalysisTypeBadge(analysis.analysisType)}`}>
+                  {getAnalysisTypeDisplay(analysis.analysisType)}
+                </span>
+              </div>
               <p className="text-slate-600 dark:text-slate-400">
                 Analysis for: {analysis.filename}
               </p>
