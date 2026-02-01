@@ -27,7 +27,13 @@ export class OpenAIClient implements LLMClient {
     }
 
     const startTime = Date.now();
-    const prompt = this.createAnalysisPrompt(input.resumeText, input.jobDescription, input.language);
+    const prompt = this.createAnalysisPrompt(
+      input.resumeText, 
+      input.jobDescription, 
+      input.language,
+      input.ragContext,
+      input.citations
+    );
 
     try {
       const completion = await this.client.chat.completions.create({
@@ -35,7 +41,7 @@ export class OpenAIClient implements LLMClient {
         messages: [
           {
             role: 'system',
-            content: this.getSystemPrompt(input.language)
+            content: this.getSystemPrompt(input.language, !!input.ragContext)
           },
           {
             role: 'user',
@@ -70,35 +76,77 @@ export class OpenAIClient implements LLMClient {
     }
   }
 
-  private createAnalysisPrompt(resumeText: string, jobDescription?: string, language: string = 'en'): string {
+  private createAnalysisPrompt(
+    resumeText: string, 
+    jobDescription?: string, 
+    language: string = 'en',
+    ragContext?: string,
+    citations?: Array<{ id: string; content: string; section: string }>
+  ): string {
     const isEnglish = language === 'en';
+    
+    let prompt = '';
+    
+    // Add RAG context if available
+    if (ragContext && citations) {
+      const contextLabel = isEnglish ? 'VERIFIED RESUME CONTENT (use ONLY this information):' : 'CONTENU VÉRIFIÉ DU CV (utilisez UNIQUEMENT ces informations):';
+      prompt += `${contextLabel}\n${ragContext}\n\n`;
+      
+      const instructionsLabel = isEnglish ? 'ANALYSIS INSTRUCTIONS:' : 'INSTRUCTIONS D\'ANALYSE:';
+      const instructions = isEnglish 
+        ? `- Base your analysis EXCLUSIVELY on the verified resume content above
+- Each piece of information is labeled with a citation (e.g., [citation_1])
+- Reference citation numbers when making observations or suggestions
+- DO NOT invent information not present in the verified content
+- If information is unavailable in the context, state "Information not found in resume"
+- Prioritize content from citations with higher relevance\n\n`
+        : `- Basez votre analyse EXCLUSIVEMENT sur le contenu vérifié du CV ci-dessus
+- Chaque information est étiquetée avec une citation (par ex., [citation_1])
+- Référencez les numéros de citation lors de vos observations ou suggestions
+- N'inventez PAS d'informations absentes du contenu vérifié
+- Si l'information n'est pas disponible dans le contexte, indiquez "Information non trouvée dans le CV"
+- Priorisez le contenu des citations ayant une pertinence élevée\n\n`;
+      
+      prompt += `${instructionsLabel}\n${instructions}`;
+    }
     
     const basePrompt = isEnglish 
       ? `Analyze the following resume${jobDescription ? ' against this job description' : ''}:`
       : `Analysez le CV suivant${jobDescription ? ' par rapport à cette description de poste' : ''}:`;
 
-    let prompt = basePrompt + '\n\n';
+    prompt += basePrompt + '\n\n';
     
     if (jobDescription) {
       const jobLabel = isEnglish ? 'JOB DESCRIPTION:' : 'DESCRIPTION DU POSTE:';
       prompt += `${jobLabel}\n${jobDescription}\n\n`;
     }
     
-    const resumeLabel = isEnglish ? 'RESUME:' : 'CV:';
-    prompt += `${resumeLabel}\n${resumeText}`;
+    // Only include full resume if no RAG context
+    if (!ragContext) {
+      const resumeLabel = isEnglish ? 'RESUME:' : 'CV:';
+      prompt += `${resumeLabel}\n${resumeText}`;
+    }
     
     return prompt;
   }
 
-  private getSystemPrompt(language: string = 'en'): string {
+  private getSystemPrompt(language: string = 'en', ragEnabled: boolean = false): string {
+    const ragInstructions = ragEnabled 
+      ? `\n\nIMPORTANT: You will be provided with VERIFIED RESUME CONTENT with citations. Use ONLY this verified content for your analysis. Do not make assumptions or add information not present in the citations. Always reference citation IDs (e.g., [citation_1]) in your remarks and suggestions.`
+      : '';
+      
     if (language === 'fr') {
+      const ragInstructionsFr = ragEnabled
+        ? `\n\nIMPORTANT: Vous recevrez du CONTENU VÉRIFIÉ DU CV avec des citations. Utilisez UNIQUEMENT ce contenu vérifié pour votre analyse. Ne faites pas d'hypothèses et n'ajoutez pas d'informations absentes des citations. Référencez toujours les identifiants de citation (par ex., [citation_1]) dans vos remarques et suggestions.`
+        : '';
+        
       return `Vous êtes un expert en recrutement et système de suivi des candidatures (ATS). Analysez le CV fourni comme le ferait à la fois un système ATS analytique et un recruteur humain expérimenté.
 
 Votre analyse doit être subjective et inclure des critiques détaillées en paragraphes pour chaque section du CV. Détectez les compétences manquantes ou sous-représentées par rapport à la description de poste.
 
 Fournissez des optimisations actionnables (formulation, formatage, mots-clés) avec priorisation. Générez également un projet de lettre de motivation adaptée.
 
-Limitez vos remarques à un maximum de 200 mots par section pour éviter la verbosité.
+Limitez vos remarques à un maximum de 200 mots par section pour éviter la verbosité.${ragInstructionsFr}
 
 Répondez uniquement avec un objet JSON valide dans ce format exact:
 {
@@ -131,7 +179,7 @@ Your analysis should be subjective and include detailed paragraph-length critiqu
 
 Provide actionable optimizations (phrasing, formatting, keywords) with prioritization. Also generate a tailored cover letter draft.
 
-Constrain your remarks to a maximum of 200 words per section to avoid verbosity.
+Constrain your remarks to a maximum of 200 words per section to avoid verbosity.${ragInstructions}
 
 Respond only with a valid JSON object in this exact format:
 {

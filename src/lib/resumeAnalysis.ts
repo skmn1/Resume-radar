@@ -525,15 +525,20 @@ export async function analyzeResumeWithProgress(
 
     if (analysisType === AnalysisType.AI_POWERED) {
       // Step 4: AI Processing (80%)
-      progressTracker?.updateProgress('Processing with AI analysis...', 80, 3);
+      progressTracker?.updateProgress('Initializing RAG and AI analysis...', 60, 3);
       
       try {
+        progressTracker?.updateProgress('Retrieving relevant resume sections...', 70, 3);
+        
         aiAnalysisResult = await generateAIAnalysis({
           resumeText,
           jobDescription,
           language: detectedLanguage,
-          analysisType
+          analysisType,
+          enableRAG: true
         });
+        
+        progressTracker?.updateProgress('Processing with AI analysis...', 85, 4);
         
         fitScore = aiAnalysisResult.fitScore;
         overallRemark = aiAnalysisResult.overallRemark;

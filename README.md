@@ -1,21 +1,26 @@
 # ResumeRadar
 
-A powerful AI-powered resume analysis application that provides comprehensive insights, optimization suggestions, and real-time progress tracking.
+A powerful AI-powered resume analysis application with **RAG (Retrieval-Augmented Generation)** technology that provides comprehensive insights, optimization suggestions, and hallucination-free analysis grounded in actual resume content.
 
 ## 🚀 Features
 
 ### Core Functionality
+- **🔥 RAG-Enhanced AI Analysis**: Zero hallucinations with citation-backed insights
 - **AI-Powered Analysis**: Deep resume analysis using Google Gemini 1.5 Flash
 - **Multi-Format Support**: PDF and DOCX file parsing
 - **Real-time Progress Tracking**: Live progress updates during analysis
 - **Comprehensive Scoring**: Detailed scoring across multiple dimensions
 - **Multi-language Support**: English and French analysis capabilities
+- **Evidence-Based Insights**: Every suggestion backed by actual resume content
 
 ### Analysis Types
-1. **AI-Powered Analysis** (Default)
+1. **AI-Powered Analysis with RAG** (Default) ⭐ NEW
+   - **RAG Technology**: Retrieval-Augmented Generation eliminates hallucinations
+   - **Citation System**: Every insight linked to specific resume sections
+   - **Verified Content Only**: Analysis based exclusively on actual resume text
    - Section-by-section critique with detailed feedback
    - Skill gap detection against job descriptions
-   - Optimization suggestions with priority levels
+   - Optimization suggestions with priority levels and evidence
    - Optional cover letter generation
    - Advanced ATS compatibility analysis
 
@@ -37,6 +42,8 @@ A powerful AI-powered resume analysis application that provides comprehensive in
 - **Framework**: Next.js 15.5.2 with Turbopack
 - **Database**: Prisma ORM with SQLite
 - **AI Integration**: Dynamic LLM factory pattern supporting multiple providers
+- **RAG System**: In-memory vector store with semantic search
+- **Embeddings**: Gemini text-embedding-004 with TF-IDF fallback
 - **Authentication**: JWT-based with role-based access control
 - **Progress Tracking**: In-memory store with polling mechanism
 
@@ -72,8 +79,47 @@ The progress tracking system provides real-time feedback during the analysis pro
 1. **File Parsing** (0-20%): PDF/DOCX text extraction
 2. **Language Detection** (20-30%): Content language identification
 3. **Content Analysis** (30-50%): Structure and formatting analysis
-4. **AI Processing** (50-80%): LLM-powered deep analysis
-5. **Results Compilation** (80-100%): Final scoring and suggestions
+4. **RAG Initialization** (50-60%): Semantic chunking and embedding 🆕
+5. **Context Retrieval** (60-70%): Relevant section retrieval 🆕
+6. **AI Processing** (70-85%): LLM-powered deep analysis with RAG
+7. **Results Compilation** (85-100%): Final scoring and suggestions
+
+## 🧠 RAG System
+
+### How It Works
+ResumeRadar uses **Retrieval-Augmented Generation (RAG)** to ensure all AI analysis is grounded in actual resume content:
+
+1. **Semantic Chunking**: Resume is intelligently split into meaningful sections
+2. **Vector Embeddings**: Each chunk is converted to embeddings using Gemini
+3. **Similarity Search**: Relevant chunks retrieved for each analysis query
+4. **Context Injection**: Verified content injected into LLM prompts with citations
+5. **Grounded Analysis**: AI can only use information from retrieved chunks
+
+### Key Benefits
+- ✅ **Zero Hallucinations**: AI cannot invent information not in resume
+- ✅ **Full Traceability**: Every insight linked to specific resume sections
+- ✅ **Evidence-Based**: All suggestions backed by actual content
+- ✅ **User Trust**: Transparent citations build confidence
+- ✅ **Quality Assurance**: Verifiable analysis results
+
+### RAG Configuration
+```typescript
+// Default RAG settings (optimized for performance)
+{
+  topK: 5,                    // Retrieve top 5 chunks
+  similarityThreshold: 0.65,  // Minimum relevance score
+  maxContextLength: 3000,     // Maximum context characters
+  reranking: true,            // Re-rank by metadata
+  chunkingConfig: {
+    maxChunkSize: 500,        // Tokens per chunk
+    overlap: 50,              // Token overlap
+    respectBoundaries: true,  // Preserve sections
+    preserveFormatting: true  // Keep structure
+  }
+}
+```
+
+For detailed RAG documentation, see [docs/RAG_IMPLEMENTATION.md](docs/RAG_IMPLEMENTATION.md)
 
 ## 🔧 Setup and Installation
 

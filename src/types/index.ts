@@ -62,6 +62,16 @@ export interface AIAnalysisResult {
   skillGaps: string[];
   sections: AIAnalysisSection[];
   coverLetterDraft?: string;
+  citations?: AnalysisCitation[];
+  ragEnabled?: boolean;
+}
+
+export interface AnalysisCitation {
+  id: string;
+  content: string;
+  section: string;
+  relevanceScore: number;
+  lineReference?: string;
 }
 
 export interface AIAnalysisSection {
@@ -69,16 +79,20 @@ export interface AIAnalysisSection {
   remark: string;
   optimizationSuggestions: OptimizationSuggestion[];
   items?: AIAnalysisItem[];
+  citationIds?: string[];
 }
 
 export interface AIAnalysisItem {
   content: string;
   remark: string;
+  citationId?: string;
 }
 
 export interface OptimizationSuggestion {
   suggestion: string;
   priority: 'High' | 'Medium' | 'Low';
+  citationId?: string;
+  evidence?: string;
 }
 
 export interface Suggestion {

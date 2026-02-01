@@ -1,22 +1,21 @@
-import { AIAnalysisResult, AnalysisType } from '@/types';
+import { AIAnalysisResult, AnalysisType, AnalysisCitation } from '@/types';
 import { detectLanguage } from './languageDetection';
 import { LLMFactory } from './llm';
+import { createRAGService, RAGContext } from './rag';
 
 interface AIAnalysisInput {
   resumeText: string;
   jobDescription?: string;
   language: string;
   analysisType: AnalysisType;
+  enableRAG?: boolean;
 }
 
 /**
- * Generate AI-powered resume analysis using OpenAI
- */
-/**
- * Generate AI-powered resume analysis using the configured LLM provider
+ * Generate AI-powered resume analysis using the configured LLM provider with RAG
  */
 export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnalysisResult> {
-  const { resumeText, jobDescription, language, analysisType } = input;
+  const { resumeText, jobDescription, language, analysisType, enableRAG = true } = input;
   
   if (analysisType !== AnalysisType.AI_POWERED) {
     throw new Error('AI analysis only available for AI_POWERED analysis type');
@@ -26,7 +25,40 @@ export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnal
   const detectedLanguage = detectLanguage(resumeText);
   const actualLanguage = language || detectedLanguage.language;
 
+  let ragContext: RAGContext | undefined;
+  let citations: AnalysisCitation[] | undefined;
+
   try {
+    // Initialize RAG if enabled
+    if (enableRAG) {
+      try {
+        const ragService = createRAGService();
+        await ragService.initialize(resumeText);
+        
+        // Generate comprehensive queries for retrieval
+        const queries = ragService.generateQueries('comprehensive', jobDescription);
+        ragContext = await ragService.retrieveMultiQueryContext(queries);
+        
+        // Convert RAG citations to analysis citations
+        citations = ragContext.citations.map(c => ({
+          id: c.id,
+          content: c.content,
+          section: c.section,
+          relevanceScore: c.relevanceScore,
+          lineReference: c.lineReference
+        }));
+
+        console.log(`RAG enabled: Retrieved ${ragContext.retrievedChunks.length} relevant chunks`);
+        
+        // Clean up
+        ragService.dispose();
+      } catch (ragError) {
+        console.warn('RAG initialization failed, proceeding without RAG:', ragError);
+        ragContext = undefined;
+        citations = undefined;
+      }
+    }
+
     // Get the active LLM client from factory
     const llmClient = await LLMFactory.getActiveClient();
     
@@ -36,7 +68,9 @@ export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnal
     const { result, metrics } = await llmClient.analyze({
       resumeText,
       jobDescription,
-      language: actualLanguage
+      language: actualLanguage,
+      ragContext: ragContext?.contextText,
+      citations: ragContext?.citations
     });
 
     // Update provider metrics
@@ -44,13 +78,15 @@ export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnal
 
     console.log(`Analysis completed in ${metrics.responseTime}ms using ${llmClient.displayName}`);
 
-    // Convert LLM result to our legacy format for compatibility
+    // Convert LLM result to our format with RAG enhancements
     return {
       overallRemark: result.overallRemark,
       fitScore: result.fitScore,
       skillGaps: result.skillGaps,
       sections: result.sections,
-      coverLetterDraft: result.coverLetterDraft
+      coverLetterDraft: result.coverLetterDraft,
+      citations,
+      ragEnabled: enableRAG && citations !== undefined && citations.length > 0
     };
     
   } catch (error) {

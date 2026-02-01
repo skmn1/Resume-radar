@@ -6,6 +6,12 @@ export interface LLMAnalysisInput {
   resumeText: string;
   jobDescription?: string;
   language: string;
+  ragContext?: string;
+  citations?: Array<{
+    id: string;
+    content: string;
+    section: string;
+  }>;
 }
 
 export interface LLMAnalysisResult {

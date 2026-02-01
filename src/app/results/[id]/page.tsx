@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { Button, Card, CardHeader, CardContent, LoadingSpinner } from '@/components/ui';
+import { Citations } from '@/components/Citations';
 import { Analysis, Suggestion } from '@/types';
 
 export default function ResultsPage() {
@@ -139,6 +140,11 @@ export default function ResultsPage() {
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getAnalysisTypeBadge(analysis.analysisType)}`}>
                   {getAnalysisTypeDisplay(analysis.analysisType)}
                 </span>
+                {analysis.aiAnalysisResult?.ragEnabled && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                    ✓ RAG-Enhanced
+                  </span>
+                )}
               </div>
               <p className="text-slate-600 dark:text-slate-400">
                 Analysis for: {analysis.filename}
@@ -260,6 +266,16 @@ export default function ResultsPage() {
               </Card>
             )}
           </div>
+
+          {/* Citations from RAG */}
+          {analysis.aiAnalysisResult?.ragEnabled && analysis.aiAnalysisResult?.citations && (
+            <div className="lg:col-span-2">
+              <Citations 
+                citations={analysis.aiAnalysisResult.citations} 
+                ragEnabled={analysis.aiAnalysisResult.ragEnabled}
+              />
+            </div>
+          )}
 
           {/* Suggestions */}
           <div>
