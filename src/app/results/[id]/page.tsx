@@ -6,11 +6,20 @@ import { useAuth } from '@/components/AuthProvider';
 import { Button, Card, CardHeader, CardContent, LoadingSpinner } from '@/components/ui';
 import { Citations } from '@/components/Citations';
 import { Analysis, Suggestion } from '@/types';
+import JobMatchingDashboard from '@/components/JobMatchingDashboard';
+import CoverLetterEditor from '@/components/CoverLetterEditor';
+import CoverLetterExport from '@/components/CoverLetterExport';
+import { CoverLetterRequest } from '@/types/jobMatching';
 
 export default function ResultsPage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCoverLetter, setShowCoverLetter] = useState(false);
+  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
+  const [coverLetterContent, setCoverLetterContent] = useState('');
+  const [coverLetterSuggestions, setCoverLetterSuggestions] = useState<string[]>([]);
+  const [coverLetterSkills, setCoverLetterSkills] = useState<string[]>([]);
   
   const { user, token } = useAuth();
   const router = useRouter();
@@ -91,6 +100,71 @@ export default function ResultsPage() {
     return type === 'AI_POWERED' 
       ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
       : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+  };
+
+  const handleGenerateCoverLetter = async () => {
+    if (!analysis || !token) return;
+    
+    setGeneratingCoverLetter(true);
+    try {
+      const request: CoverLetterRequest = {
+        resumeText: analysis.resumeText || '',
+        jobDescription: analysis.jobDescription || '',
+        candidateName: user?.name || 'Applicant',
+        candidateEmail: user?.email,
+        analysisId: analysis.id,
+        jobMatchResult: analysis.jobMatchResult
+      };
+
+      const response = await fetch('/api/cover-letter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(request)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCoverLetterContent(data.content);
+        setCoverLetterSuggestions(data.suggestions || []);
+        setCoverLetterSkills(data.highlightedSkills || []);
+        setShowCoverLetter(true);
+      } else {
+        alert(`Failed to generate cover letter: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Cover letter generation error:', error);
+      alert('Failed to generate cover letter. Please try again.');
+    } finally {
+      setGeneratingCoverLetter(false);
+    }
+  };
+
+  const handleSaveCoverLetter = async (content: string) => {
+    if (!analysis || !token) return;
+
+    try {
+      const response = await fetch(`/api/analyses/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          coverLetter: content,
+          coverLetterGenerated: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save cover letter');
+      }
+    } catch (error) {
+      console.error('Save cover letter error:', error);
+    }
   };
 
   if (!user) {
@@ -177,6 +251,75 @@ export default function ResultsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Job Matching Dashboard */}
+        {analysis.jobMatchResult && (
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  🎯 Job Matching Analysis
+                </h3>
+                <p className="text-slate-600 dark:text-slate-400 mt-1">
+                  How well does your resume match this job opportunity?
+                </p>
+              </CardHeader>
+              <CardContent>
+                <JobMatchingDashboard matchResult={analysis.jobMatchResult} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Cover Letter Section */}
+        {analysis.jobDescription && (
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                      ✉️ AI-Powered Cover Letter
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 mt-1">
+                      Generate a professional, tailored cover letter for this position
+                    </p>
+                  </div>
+                  {!showCoverLetter && (
+                    <Button 
+                      onClick={handleGenerateCoverLetter}
+                      disabled={generatingCoverLetter}
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                    >
+                      {generatingCoverLetter ? '⏳ Generating...' : '✨ Generate Cover Letter'}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              {showCoverLetter && (
+                <CardContent className="space-y-6">
+                  <CoverLetterEditor
+                    initialContent={coverLetterContent}
+                    onSave={handleSaveCoverLetter}
+                    onRegenerate={handleGenerateCoverLetter}
+                    isRegenerating={generatingCoverLetter}
+                    suggestions={coverLetterSuggestions}
+                    highlightedSkills={coverLetterSkills}
+                  />
+                  <div className="flex justify-center">
+                    <CoverLetterExport
+                      content={coverLetterContent}
+                      candidateName={user?.name || 'Applicant'}
+                      candidateEmail={user?.email}
+                      companyName={analysis.jobMatchResult?.companyName}
+                      jobTitle={analysis.jobMatchResult?.jobTitle}
+                    />
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Score Breakdown */}

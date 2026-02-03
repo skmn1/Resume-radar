@@ -43,6 +43,14 @@ export interface Analysis {
   skillGaps?: string[];
   coverLetterDraft?: string;
   
+  // Job Matching (NEW)
+  jobMatchResult?: any; // JobMatchResult from jobMatching types
+  jobMatchScore?: number; // Overall match percentage
+  
+  // Cover Letter (NEW)
+  coverLetter?: any; // CoverLetterResult from jobMatching types
+  coverLetterGenerated?: boolean;
+  
   // Metadata
   fileSize?: number;
   processingTimeMs?: number;

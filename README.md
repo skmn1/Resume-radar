@@ -6,6 +6,9 @@ A powerful AI-powered resume analysis application with **RAG (Retrieval-Augmente
 
 ### Core Functionality
 - **🔥 RAG-Enhanced AI Analysis**: Zero hallucinations with citation-backed insights
+- **🎯 Dynamic Job Matching**: Intelligent resume-to-job-description matching with requirement tracking ⭐ NEW
+- **✉️ AI Cover Letter Generator**: Professional, tailored cover letters with in-app editor ⭐ NEW
+- **📥 Multi-Format Export**: Export cover letters as PDF, DOCX, HTML, or TXT ⭐ NEW
 - **AI-Powered Analysis**: Deep resume analysis using Google Gemini 1.5 Flash
 - **Multi-Format Support**: PDF and DOCX file parsing
 - **Real-time Progress Tracking**: Live progress updates during analysis
@@ -35,6 +38,70 @@ A powerful AI-powered resume analysis application with **RAG (Retrieval-Augmente
 - **Step-by-step Tracking**: Visual indicators for each analysis phase
 - **Time Estimation**: Estimated completion time based on current progress
 - **Status Updates**: Descriptive messages for current processing step
+
+### 🎯 Dynamic Job Matching (NEW)
+
+Transform your resume analysis into a targeted job application tool! When you provide a job description, ResumeRadar:
+
+#### Features
+- **🔍 Requirement Extraction**: Automatically identifies required skills, experience, and education from job postings
+- **✅ Match Scoring**: Calculates overall compatibility percentage plus breakdown by category
+- **📊 Visual Dashboard**: Color-coded match quality indicators (excellent/good/needs improvement)
+- **💪 Strengths Identification**: Highlights your competitive advantages
+- **📈 Gap Analysis**: Pinpoints missing qualifications with actionable recommendations
+- **🎯 Evidence Linking**: Shows WHERE in your resume each requirement is met
+
+#### How It Works
+1. Upload your resume
+2. Paste the job description
+3. Get instant match analysis with:
+   - Overall match score (0-100%)
+   - Skills match percentage
+   - Experience match percentage  
+   - Education match percentage
+   - Detailed requirement checklist with evidence
+   - Specific recommendations for improvement
+
+#### Match Quality Indicators
+- **80-100%** 🟢 Excellent Match - Strong candidate, apply with confidence
+- **60-79%** 🟡 Good Match - Qualified with some gaps to address
+- **0-59%** 🔴 Needs Work - Significant improvements recommended
+
+### ✉️ AI-Powered Cover Letter Generator (NEW)
+
+Automatically generate professional, personalized cover letters tailored to each job opportunity!
+
+#### Features
+- **🤖 AI-Powered Generation**: Expert-level writing using Google Gemini AI
+- **📝 In-App Editor**: Edit, refine, and perfect your cover letter without leaving the app
+- **💾 Auto-Save**: Changes saved automatically every 2 seconds
+- **📊 Smart Metrics**: Real-time word count with optimal length guidance (250-400 words)
+- **✨ AI Suggestions**: Intelligent recommendations for improvement
+- **🎨 Professional Formatting**: Properly formatted business letter layout
+- **📥 Multi-Format Export**: Download as PDF, DOCX, HTML, or plain text
+
+#### Generation Process
+1. **RAG Context Retrieval**: Extracts your most relevant achievements and skills
+2. **Expert Prompt Engineering**: 15-year career coach persona with strict quality standards
+3. **Personalized Content**: References specific job requirements and company details
+4. **Quality Assurance**: 
+   - Avoids generic clichés and AI-sounding phrases
+   - Uses metrics and quantifiable achievements
+   - Maintains authentic, human voice
+   - Focuses on value proposition
+
+#### Export Options
+- **📑 PDF**: Professional format via browser print (ideal for applications)
+- **📝 DOCX**: Word-compatible HTML (edit in Microsoft Word)
+- **🌐 HTML**: Formatted for email or web posting
+- **📄 TXT**: Plain text for copy-paste
+
+#### Cover Letter Quality Standards
+- **Length**: 250-400 words (3-4 concise paragraphs)
+- **Structure**: Opening → Body (2 paragraphs) → Closing
+- **Style**: Professional yet engaging, confident but not arrogant
+- **Content**: Specific metrics, actual job requirements, demonstrable value
+- **Tone**: Human and authentic, avoiding AI detection patterns
 
 ## 🛠 Technical Architecture
 
@@ -81,8 +148,9 @@ The progress tracking system provides real-time feedback during the analysis pro
 3. **Content Analysis** (30-50%): Structure and formatting analysis
 4. **RAG Initialization** (50-60%): Semantic chunking and embedding 🆕
 5. **Context Retrieval** (60-70%): Relevant section retrieval 🆕
-6. **AI Processing** (70-85%): LLM-powered deep analysis with RAG
-7. **Results Compilation** (85-100%): Final scoring and suggestions
+6. **AI Processing** (70-80%): LLM-powered deep analysis with RAG
+7. **Job Matching** (80-85%): Resume-to-job compatibility analysis 🆕
+8. **Results Compilation** (85-100%): Final scoring and suggestions
 
 ## 🧠 RAG System
 
@@ -241,11 +309,14 @@ Retrieves real-time progress for an ongoing analysis.
 ## 🔮 Future Enhancements
 
 ### Planned Features
+- **Multi-Job Comparison**: Compare resume match scores across multiple job postings
+- **Resume Optimizer**: AI-powered resume rewriting based on job requirements
+- **Application Tracking**: Track submitted applications with status updates
 - **WebSocket Integration**: Replace polling with real-time WebSocket connections
 - **Redis Integration**: Production-ready progress store with persistence
 - **Advanced Analytics**: Detailed metrics dashboard for administrators
 - **Batch Processing**: Multiple resume analysis with queue management
-- **Export Functionality**: PDF report generation with analysis results
+- **LinkedIn Integration**: Import profile data directly from LinkedIn
 
 ### Performance Optimizations
 - **Caching Layer**: Redis-based caching for frequently accessed data

@@ -4,6 +4,7 @@ import { Analysis, Suggestion, KeywordMatch, FormattingIssue, AnalysisType, AIAn
 import { generateAIAnalysis } from './aiAnalysis';
 import { detectLanguage, detectMixedLanguages } from './languageDetection';
 import { createRAGService, RAGService } from './rag';
+import { analyzeJobMatch } from './jobMatching';
 
 // Import ProgressTracker type
 interface ProgressTracker {
@@ -922,6 +923,25 @@ export async function analyzeResumeWithProgress(
       }
     }
 
+    // Step 7.5: Job Matching Analysis (if job description provided) (80%)
+    let jobMatchResult: any = undefined;
+    let jobMatchScore: number | undefined = undefined;
+    
+    if (jobDescription && jobDescription.trim().length > 50) {
+      try {
+        progressTracker?.updateProgress('🎯 Analyzing job match...', 80, 4);
+        console.log('🎯 [JobMatching] Starting job match analysis...');
+        
+        jobMatchResult = await analyzeJobMatch(resumeText, jobDescription);
+        jobMatchScore = jobMatchResult.overallMatch;
+        
+        console.log(`   ✅ Job Match: ${jobMatchScore ? jobMatchScore.toFixed(0) : '0'}%`);
+      } catch (jobMatchError) {
+        console.error('⚠️ [JobMatching] Analysis failed:', jobMatchError);
+        // Continue without job match - it's optional
+      }
+    }
+
     // Step 8: RAG-enhanced suggestions (85%)
     progressTracker?.updateProgress('💡 Generating AI-powered suggestions...', 85, 4);
     
@@ -987,6 +1007,10 @@ export async function analyzeResumeWithProgress(
       overallRemark,
       skillGaps,
       coverLetterDraft,
+      
+      // Job Matching results (NEW)
+      jobMatchResult,
+      jobMatchScore,
       
       processingTimeMs: processingTime,
       errorMessage: mixedLanguages.length > 1 
