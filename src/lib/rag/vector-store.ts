@@ -4,17 +4,18 @@
  */
 
 import { DocumentChunk, RetrievalResult } from './types';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 export class VectorStore {
   private chunks: Map<string, DocumentChunk> = new Map();
-  private geminiClient: GoogleGenerativeAI | null = null;
+  private geminiClient: GoogleGenAI | null = null;
   private embeddingCache: Map<string, number[]> = new Map();
 
   constructor() {
-    // Initialize Gemini for embeddings
     if (process.env.GEMINI_API_KEY) {
-      this.geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      this.geminiClient = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY
+      });
     }
   }
 
@@ -47,9 +48,19 @@ export class VectorStore {
     }
 
     try {
-      const model = this.geminiClient.getGenerativeModel({ model: 'text-embedding-004' });
-      const result = await model.embedContent(text);
-      const embedding = result.embedding.values;
+      // NEW SDK: Use models.embedContent instead of getGenerativeModel
+      const result = await this.geminiClient.models.embedContent({
+        model: 'text-embedding-004',
+        contents: {
+          parts: [{ text: text }]
+        }
+      });
+      
+      if (!result.embeddings || result.embeddings.length === 0 || !result.embeddings[0].values) {
+        throw new Error('No embeddings returned from API');
+      }
+
+      const embedding = result.embeddings[0].values;
       
       // Cache the embedding
       this.embeddingCache.set(cacheKey, embedding);

@@ -1,14 +1,16 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { LLMClient, LLMAnalysisInput, LLMAnalysisResult, LLMUsageMetrics } from './types';
 
 export class GeminiClient implements LLMClient {
   public readonly name = 'gemini';
-  public readonly displayName = 'Google Gemini 1.5 Flash';
-  private client: GoogleGenerativeAI | null = null;
+  public readonly displayName = 'Google Gemini 3 Flash Preview';
+  private client: GoogleGenAI | null = null;
 
   constructor() {
     if (process.env.GEMINI_API_KEY) {
-      this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      this.client = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY
+      });
     }
   }
 
@@ -25,7 +27,6 @@ export class GeminiClient implements LLMClient {
     }
 
     const startTime = Date.now();
-    const model = this.client.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = this.createAnalysisPrompt(
       input.resumeText, 
@@ -39,11 +40,13 @@ export class GeminiClient implements LLMClient {
     const fullPrompt = `${systemPrompt}\n\n${prompt}`;
 
     try {
-      const result = await model.generateContent(fullPrompt);
+      const response = await this.client.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: fullPrompt,
+      });
       const responseTime = Date.now() - startTime;
       
-      const response = await result.response;
-      const text = response.text();
+      const text = response.text;
       
       if (!text) {
         throw new Error('No response from Gemini');

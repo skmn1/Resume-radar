@@ -132,7 +132,7 @@ For detailed RAG documentation, see [docs/RAG_IMPLEMENTATION.md](docs/RAG_IMPLEM
 Create a `.env.local` file:
 ```env
 # Required: Gemini AI Configuration
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=yAIzaSyCbV6YU3Ysbo1YQz8lyvD3n5VtuEMyBZmg
 
 # Optional: OpenAI Fallback
 OPENAI_API_KEY=your_openai_api_key_here

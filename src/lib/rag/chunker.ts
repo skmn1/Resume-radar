@@ -284,6 +284,6 @@ export class ResumeChunker {
    * Clean up
    */
   dispose() {
-    this.tokenizer.free();
+    // js-tiktoken doesn't require manual cleanup
   }
 }
