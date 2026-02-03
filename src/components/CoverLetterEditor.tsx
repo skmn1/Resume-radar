@@ -44,13 +44,6 @@ export default function CoverLetterEditor({
 
     return () => clearTimeout(timeoutId);
   }, [content, isEditing, handleSave]);
-      } catch (error) {
-        console.error('Save failed:', error);
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  };
 
   const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
   const charCount = content.length;
