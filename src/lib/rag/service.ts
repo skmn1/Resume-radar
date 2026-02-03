@@ -46,25 +46,35 @@ export class RAGService {
    * Retrieve relevant context for a query
    */
   async retrieveContext(query: string): Promise<RAGContext> {
+    console.log('🔎 [RAGService] retrieveContext called with query:', query);
+    
     if (!this.isInitialized) {
+      console.error('❌ [RAGService] Service not initialized!');
       throw new Error('RAG service not initialized');
     }
 
+    console.log('✅ [RAGService] Service is initialized, vectorStore size:', this.vectorStore.size());
+
     try {
       // Step 1: Retrieve relevant chunks
+      console.log('📞 [RAGService] Calling vectorStore.retrieve...');
       let results = await this.vectorStore.retrieve(
         query,
         this.config.topK,
         this.config.similarityThreshold
       );
+      console.log('📦 [RAGService] VectorStore returned:', results.length, 'results');
 
       // Step 2: Re-rank if enabled
       if (this.config.reranking && results.length > 0) {
+        console.log('🔄 [RAGService] Re-ranking results...');
         results = this.vectorStore.rerank(results, query);
+        console.log('📦 [RAGService] After re-ranking:', results.length, 'results');
       }
 
       // Step 3: Build context and citations
       const { contextText, citations } = this.buildContext(results, query);
+      console.log('📝 [RAGService] Built context, text length:', contextText.length, 'citations:', citations.length);
 
       return {
         query,
@@ -73,7 +83,7 @@ export class RAGService {
         citations
       };
     } catch (error) {
-      console.error('Context retrieval failed:', error);
+      console.error('💥 [RAGService] Context retrieval failed:', error);
       // Return empty context on error
       return {
         query,
