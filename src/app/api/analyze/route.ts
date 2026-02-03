@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         filename: file.name,
+        resumeText: null, // Will be updated after parsing
         jobDescription: jobDescription || null,
         analysisType: analysisType as AnalysisType,
         language: language || 'en',
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
         await prisma.analysis.update({
           where: { id: analysis.id },
           data: {
+            resumeText: analysisResult.resumeText, // Save resume text for cover letter generation
             language: analysisResult.language,
             
             // Legacy fields

@@ -987,6 +987,7 @@ export async function analyzeResumeWithProgress(
 
     return {
       filename,
+      resumeText, // Include resume text for cover letter generation
       jobDescription: jobDescription || undefined,
       analysisType,
       language: detectedLanguage,

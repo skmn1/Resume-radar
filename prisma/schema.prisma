@@ -40,6 +40,7 @@ model Analysis {
   id                    String      @id @default(cuid())
   userId                String
   filename              String
+  resumeText            String?     // Full text content of resume
   jobDescription        String?
   analysisType          AnalysisType @default(STANDARD)
   language              String      @default("en")

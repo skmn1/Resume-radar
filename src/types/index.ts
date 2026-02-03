@@ -22,6 +22,7 @@ export interface Analysis {
   id: string;
   userId: string;
   filename: string;
+  resumeText?: string;
   jobDescription?: string;
   analysisType: AnalysisType;
   language: string;
