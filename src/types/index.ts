@@ -138,6 +138,7 @@ export interface KeywordMatch {
   found: boolean;
   synonyms?: string[];
   count: number;
+  context?: string; // RAG-retrieved context showing how/where the keyword is used
 }
 
 export interface FormattingIssue {
