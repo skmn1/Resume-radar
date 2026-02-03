@@ -1,7 +1,7 @@
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import { Analysis, Suggestion, KeywordMatch, FormattingIssue, AnalysisType, AIAnalysisResult } from '@/types';
-import { generateAIAnalysis, generateStandardAnalysis } from './aiAnalysis';
+import { generateAIAnalysis } from './aiAnalysis';
 import { detectLanguage, detectMixedLanguages } from './languageDetection';
 
 // Import ProgressTracker type
@@ -352,7 +352,7 @@ export async function analyzeResume(
   fileBuffer: Buffer,
   filename: string,
   jobDescription?: string,
-  analysisType: AnalysisType = AnalysisType.STANDARD,
+  analysisType: AnalysisType = AnalysisType.AI_POWERED,
   language?: string
 ): Promise<Omit<Analysis, 'id' | 'userId' | 'createdAt'>> {
   const startTime = Date.now();
@@ -391,11 +391,9 @@ export async function analyzeResume(
         skillGaps = aiAnalysisResult.skillGaps;
         coverLetterDraft = aiAnalysisResult.coverLetterDraft;
       } catch (aiError) {
-        console.error('AI analysis failed, falling back to standard analysis:', aiError);
-        // Fall back to standard analysis
-        aiAnalysisResult = generateStandardAnalysis(resumeText, jobDescription);
-        fitScore = aiAnalysisResult.fitScore;
-        overallRemark = aiAnalysisResult.overallRemark;
+        console.error('AI analysis failed:', aiError);
+        // Rethrow - no fallback to standard analysis
+        throw new Error(`AI-powered analysis failed: ${aiError instanceof Error ? aiError.message : String(aiError)}`);
       }
     }
 
@@ -492,7 +490,7 @@ export async function analyzeResumeWithProgress(
   fileBuffer: Buffer,
   filename: string,
   jobDescription?: string,
-  analysisType: AnalysisType = AnalysisType.STANDARD,
+  analysisType: AnalysisType = AnalysisType.AI_POWERED,
   language?: string,
   progressTracker?: ProgressTracker
 ): Promise<Omit<Analysis, 'id' | 'userId' | 'createdAt'>> {
@@ -516,44 +514,36 @@ export async function analyzeResumeWithProgress(
     // Step 3: Content analysis (50%)
     progressTracker?.updateProgress('Analyzing content structure...', 50, 2);
     
-    // Generate AI analysis if requested
+    // Always generate AI analysis with RAG
     let aiAnalysisResult: AIAnalysisResult | undefined;
     let fitScore: number | undefined;
     let overallRemark: string | undefined;
     let skillGaps: string[] | undefined;
     let coverLetterDraft: string | undefined;
 
-    if (analysisType === AnalysisType.AI_POWERED) {
-      // Step 4: AI Processing (80%)
-      progressTracker?.updateProgress('Initializing RAG and AI analysis...', 60, 3);
+    // Step 4: AI Processing with RAG (80%)
+    progressTracker?.updateProgress('Initializing RAG and AI analysis...', 60, 3);
+    
+    try {
+      progressTracker?.updateProgress('Retrieving relevant resume sections...', 70, 3);
       
-      try {
-        progressTracker?.updateProgress('Retrieving relevant resume sections...', 70, 3);
-        
-        aiAnalysisResult = await generateAIAnalysis({
-          resumeText,
-          jobDescription,
-          language: detectedLanguage,
-          analysisType,
-          enableRAG: true
-        });
-        
-        progressTracker?.updateProgress('Processing with AI analysis...', 85, 4);
-        
-        fitScore = aiAnalysisResult.fitScore;
-        overallRemark = aiAnalysisResult.overallRemark;
-        skillGaps = aiAnalysisResult.skillGaps;
-        coverLetterDraft = aiAnalysisResult.coverLetterDraft;
-      } catch (error) {
-        console.error('AI analysis failed, falling back to standard analysis:', error);
-        progressTracker?.updateProgress('AI analysis failed, using standard analysis...', 80, 3);
-        
-        const standardResult = generateStandardAnalysis(resumeText, jobDescription);
-        aiAnalysisResult = standardResult;
-        fitScore = standardResult.fitScore;
-        overallRemark = standardResult.overallRemark;
-        skillGaps = standardResult.skillGaps;
-      }
+      aiAnalysisResult = await generateAIAnalysis({
+        resumeText,
+        jobDescription,
+        language: detectedLanguage,
+        analysisType: AnalysisType.AI_POWERED,
+        enableRAG: true
+      });
+      
+      progressTracker?.updateProgress('Processing with AI analysis...', 85, 4);
+      
+      fitScore = aiAnalysisResult.fitScore;
+      overallRemark = aiAnalysisResult.overallRemark;
+      skillGaps = aiAnalysisResult.skillGaps;
+      coverLetterDraft = aiAnalysisResult.coverLetterDraft;
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      throw new Error(`AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
     // Standard analysis components

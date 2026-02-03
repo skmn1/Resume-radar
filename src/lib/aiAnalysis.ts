@@ -122,28 +122,6 @@ export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnal
 }
 
 /**
- * Generate a simple analysis for non-AI mode (fallback)
- */
-export function generateStandardAnalysis(resumeText: string, jobDescription?: string): AIAnalysisResult {
-  return {
-    overallRemark: jobDescription 
-      ? "Standard analysis completed. Consider using AI-powered analysis for detailed insights."
-      : "Standard analysis completed without job description.",
-    fitScore: 75,
-    skillGaps: [],
-    sections: [
-      {
-        title: "OVERALL",
-        remark: "Standard analysis provides basic keyword matching and formatting checks. For detailed section-by-section analysis and optimization suggestions, please use AI-powered analysis.",
-        optimizationSuggestions: [
-          { suggestion: "Consider using AI-powered analysis for detailed feedback", priority: "Medium" }
-        ]
-      }
-    ]
-  };
-}
-
-/**
  * Initialize LLM providers on module load
  */
 (async () => {

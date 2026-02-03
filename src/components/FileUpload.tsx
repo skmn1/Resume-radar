@@ -11,7 +11,8 @@ interface FileUploadProps {
 
 function EnhancedFileUpload({ onUpload, isUploading }: FileUploadProps) {
   const [jobDescription, setJobDescription] = useState('');
-  const [analysisType, setAnalysisType] = useState<AnalysisType>(AnalysisType.AI_POWERED);
+  // Always use AI_POWERED - no user selection needed
+  const analysisType = AnalysisType.AI_POWERED;
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -32,78 +33,13 @@ function EnhancedFileUpload({ onUpload, isUploading }: FileUploadProps) {
 
   return (
     <div className="space-y-6">
-      {/* Analysis Type Selection */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Choose Analysis Mode
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div 
-            className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-              analysisType === AnalysisType.STANDARD
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-            }`}
-            onClick={() => setAnalysisType(AnalysisType.STANDARD)}
-          >
-            <div className="flex items-center mb-2">
-              <input
-                type="radio"
-                checked={analysisType === AnalysisType.STANDARD}
-                onChange={() => setAnalysisType(AnalysisType.STANDARD)}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label className="ml-2 text-sm font-medium text-gray-900 dark:text-white">
-                Standard Analysis
-              </label>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 ml-6">
-              Fast keyword matching, formatting checks, and readability scoring. 
-              Perfect for quick assessments.
-            </p>
-          </div>
-
-          <div 
-            className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-              analysisType === AnalysisType.AI_POWERED
-                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-            }`}
-            onClick={() => setAnalysisType(AnalysisType.AI_POWERED)}
-          >
-            <div className="flex items-center mb-2">
-              <input
-                type="radio"
-                checked={analysisType === AnalysisType.AI_POWERED}
-                onChange={() => setAnalysisType(AnalysisType.AI_POWERED)}
-                className="h-4 w-4 text-purple-600"
-              />
-              <label className="ml-2 text-sm font-medium text-gray-900 dark:text-white">
-                AI-Powered Analysis
-              </label>
-              <span className="ml-2 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">
-                Enhanced
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 ml-6">
-              Intelligent section-by-section analysis, skill gap detection, 
-              optimization suggestions, and optional cover letter generation.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Job Description */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <label htmlFor="job-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Job Description (Optional)
         </label>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          {analysisType === AnalysisType.AI_POWERED 
-            ? "Paste the job description to get personalized analysis and cover letter generation."
-            : "Paste the job description to improve keyword matching accuracy."
-          }
+          Paste the job description to get personalized AI analysis and cover letter generation.
         </p>
         <textarea
           id="job-description"
@@ -156,26 +92,24 @@ function EnhancedFileUpload({ onUpload, isUploading }: FileUploadProps) {
       </div>
 
       {/* Language Detection Info */}
-      {analysisType === AnalysisType.AI_POWERED && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                Multilingual Support
-              </h3>
-              <div className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-                AI analysis supports English and French. Language will be automatically detected, 
-                with fallback to English if needed.
-              </div>
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+              AI-Powered Analysis with RAG
+            </h3>
+            <div className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+              Your resume will be analyzed using advanced AI with Retrieval-Augmented Generation (RAG) technology. 
+              Supports English and French with automatic language detection.
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

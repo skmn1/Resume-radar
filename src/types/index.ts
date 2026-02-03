@@ -52,8 +52,8 @@ export interface Analysis {
 }
 
 export enum AnalysisType {
-  STANDARD = 'STANDARD',
-  AI_POWERED = 'AI_POWERED'
+  STANDARD = 'STANDARD', // Deprecated - kept for database compatibility only
+  AI_POWERED = 'AI_POWERED' // Default and only supported type
 }
 
 export interface AIAnalysisResult {
