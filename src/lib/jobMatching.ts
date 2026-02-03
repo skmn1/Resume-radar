@@ -13,7 +13,6 @@ export function extractJobRequirements(jobDescription: string): JobRequirement[]
   console.log('📋 [JobMatching] Extracting requirements from job description...');
   
   const requirements: JobRequirement[] = [];
-  const lines = jobDescription.split('\n');
   let requirementId = 0;
   
   // Common requirement patterns

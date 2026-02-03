@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CoverLetterResult } from '@/types/jobMatching';
 
 interface CoverLetterEditorProps {
@@ -19,6 +19,21 @@ export default function CoverLetterEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
+  // Auto-save handler
+  const handleSave = useCallback(async () => {
+    if (onSave) {
+      setIsSaving(true);
+      try {
+        await onSave(content);
+        setLastSaved(new Date());
+      } catch (error) {
+        console.error('Save failed:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  }, [content, onSave]);
+
   // Auto-save debounce
   useEffect(() => {
     if (!isEditing) return;
@@ -28,14 +43,7 @@ export default function CoverLetterEditor({
     }, 2000); // Auto-save after 2 seconds of no typing
 
     return () => clearTimeout(timeoutId);
-  }, [content, isEditing]);
-
-  const handleSave = async () => {
-    if (onSave) {
-      setIsSaving(true);
-      try {
-        await onSave(content);
-        setLastSaved(new Date());
+  }, [content, isEditing, handleSave]);
       } catch (error) {
         console.error('Save failed:', error);
       } finally {

@@ -19,7 +19,7 @@ export default function CoverLetterExport({
   candidateEmail,
   candidatePhone,
   companyName,
-  jobTitle
+  jobTitle: _jobTitle // Reserved for future use
 }: CoverLetterExportProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [showOptions, setShowOptions] = useState(false);

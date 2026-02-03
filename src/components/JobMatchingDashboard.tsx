@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { JobMatchResult, JobRequirement } from '@/types/jobMatching';
+import { JobMatchResult } from '@/types/jobMatching';
 
 interface JobMatchingDashboardProps {
   matchResult: JobMatchResult;
@@ -90,7 +90,7 @@ export default function JobMatchingDashboard({ matchResult }: JobMatchingDashboa
                   </div>
                   {req.foundInResume && req.resumeEvidence && (
                     <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 italic">
-                      "{req.resumeEvidence}"
+                      &ldquo;{req.resumeEvidence}&rdquo;
                     </div>
                   )}
                   {req.sectionReference && (
