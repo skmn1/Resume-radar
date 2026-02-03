@@ -32,12 +32,36 @@ export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnal
     // Initialize RAG if enabled
     if (enableRAG) {
       try {
+        console.log('🤖 [RAG] Starting RAG system...');
+        console.log('📄 [RAG] Resume length:', resumeText.length, 'characters');
+        
         const ragService = createRAGService();
         await ragService.initialize(resumeText);
         
+        console.log('✅ [RAG] Initialization complete!');
+        const stats = ragService.getStats();
+        console.log('📊 [RAG] Chunks stored:', stats.chunksStored);
+        console.log('📊 [RAG] Config:', JSON.stringify(stats.config, null, 2));
+        
         // Generate comprehensive queries for retrieval
         const queries = ragService.generateQueries('comprehensive', jobDescription);
+        console.log('🔍 [RAG] Generated queries:', queries);
+        
         ragContext = await ragService.retrieveMultiQueryContext(queries);
+        console.log('📦 [RAG] Retrieved chunks:', ragContext.retrievedChunks.length);
+        console.log('📝 [RAG] Context text length:', ragContext.contextText.length);
+        console.log('📌 [RAG] Citations count:', ragContext.citations.length);
+        
+        if (ragContext.retrievedChunks.length === 0) {
+          console.error('⚠️ [RAG] WARNING: NO CHUNKS FOUND! Check embeddings!');
+          console.error('⚠️ [RAG] This means similarity search returned nothing.');
+          console.error('⚠️ [RAG] Possible causes: embedding failure, threshold too high, or chunking issue');
+        } else {
+          console.log('✅ [RAG] Success! Found relevant resume sections!');
+          ragContext.retrievedChunks.forEach((chunk, idx) => {
+            console.log(`   📄 Chunk ${idx + 1}: score=${chunk.score.toFixed(3)}, section=${chunk.chunk.metadata.sectionType}`);
+          });
+        }
         
         // Convert RAG citations to analysis citations
         citations = ragContext.citations.map(c => ({
@@ -48,12 +72,14 @@ export async function generateAIAnalysis(input: AIAnalysisInput): Promise<AIAnal
           lineReference: c.lineReference
         }));
 
-        console.log(`RAG enabled: Retrieved ${ragContext.retrievedChunks.length} relevant chunks`);
+        console.log(`🎯 [RAG] Final status: Retrieved ${ragContext.retrievedChunks.length} relevant chunks`);
         
         // Clean up
         ragService.dispose();
       } catch (ragError) {
-        console.warn('RAG initialization failed, proceeding without RAG:', ragError);
+        console.error('💥 [RAG] CRITICAL ERROR:', ragError);
+        console.error('💥 [RAG] Error stack:', ragError instanceof Error ? ragError.stack : 'No stack trace');
+        console.warn('⚠️ [RAG] Falling back to analysis without RAG');
         ragContext = undefined;
         citations = undefined;
       }

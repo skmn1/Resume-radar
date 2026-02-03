@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const jobDescription = formData.get('jobDescription') as string;
-    const analysisType = (formData.get('analysisType') as string) || AnalysisType.STANDARD;
+    const analysisType = (formData.get('analysisType') as string) || AnalysisType.AI_POWERED;
     const language = formData.get('language') as string;
 
     if (!file) {

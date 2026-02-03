@@ -77,7 +77,7 @@ export interface RAGConfig {
 
 export const DEFAULT_RAG_CONFIG: RAGConfig = {
   topK: 5,
-  similarityThreshold: 0.65,
+  similarityThreshold: 0.50,
   maxContextLength: 3000,
   reranking: true,
   chunkingConfig: {

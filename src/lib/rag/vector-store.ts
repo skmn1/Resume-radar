@@ -48,12 +48,12 @@ export class VectorStore {
     }
 
     try {
-      // NEW SDK: Use models.embedContent instead of getGenerativeModel
+      // NEW SDK: Use models.embedContent with correct format
       const result = await this.geminiClient.models.embedContent({
         model: 'text-embedding-004',
-        contents: {
-          parts: [{ text: text }]
-        }
+        contents: [
+          { parts: [{ text: text }] }
+        ]
       });
       
       if (!result.embeddings || result.embeddings.length === 0 || !result.embeddings[0].values) {
