@@ -39,16 +39,18 @@ export class VectorStore {
     // Check cache first
     const cacheKey = this.hashText(text);
     if (this.embeddingCache.has(cacheKey)) {
+      console.log('🔄 [VectorStore] Using cached embedding');
       return this.embeddingCache.get(cacheKey)!;
     }
 
     if (!this.geminiClient) {
-      // Fallback: simple TF-IDF-like embedding
+      console.log('⚠️ [VectorStore] No Gemini client, using fallback embedding');
       return this.generateSimpleEmbedding(text);
     }
 
     try {
-      // NEW SDK: Use models.embedContent with correct format
+      console.log('🧮 [VectorStore] Generating Gemini embedding for text:', text.substring(0, 100) + '...');
+      
       const result = await this.geminiClient.models.embedContent({
         model: 'text-embedding-004',
         contents: [
@@ -57,17 +59,19 @@ export class VectorStore {
       });
       
       if (!result.embeddings || result.embeddings.length === 0 || !result.embeddings[0].values) {
-        throw new Error('No embeddings returned from API');
+        console.error('❌ [VectorStore] No embeddings returned, using fallback');
+        return this.generateSimpleEmbedding(text);
       }
 
       const embedding = result.embeddings[0].values;
+      console.log('✅ [VectorStore] Gemini embedding generated, length:', embedding.length);
       
       // Cache the embedding
       this.embeddingCache.set(cacheKey, embedding);
       return embedding;
     } catch (error) {
-      console.error('Embedding generation error:', error);
-      // Fallback to simple embedding
+      console.error('❌ [VectorStore] Embedding generation error:', error);
+      console.log('⚠️ [VectorStore] Falling back to simple embedding');
       return this.generateSimpleEmbedding(text);
     }
   }
@@ -110,26 +114,55 @@ export class VectorStore {
    * Retrieve relevant chunks based on query
    */
   async retrieve(query: string, topK: number = 5, threshold: number = 0.65): Promise<RetrievalResult[]> {
+    console.log('🔍 [VectorStore] Starting retrieval for query:', query.substring(0, 100));
+    console.log('📊 [VectorStore] Total chunks in store:', this.chunks.size);
+    console.log('📊 [VectorStore] Threshold:', threshold, 'TopK:', topK);
+    
     const queryEmbedding = await this.generateEmbedding(query);
+    console.log('🧮 [VectorStore] Query embedding length:', queryEmbedding.length);
+    
     const results: RetrievalResult[] = [];
+    let maxSimilarity = 0;
+    let minSimilarity = 1;
 
     for (const chunk of this.chunks.values()) {
-      if (!chunk.embedding) continue;
+      if (!chunk.embedding) {
+        console.warn('⚠️ [VectorStore] Chunk has no embedding:', chunk.id);
+        continue;
+      }
 
       const similarity = this.cosineSimilarity(queryEmbedding, chunk.embedding);
       
+      maxSimilarity = Math.max(maxSimilarity, similarity);
+      minSimilarity = Math.min(minSimilarity, similarity);
+      
+      console.log('📊 [VectorStore] Chunk', chunk.id, 'similarity:', similarity.toFixed(3), 'section:', chunk.metadata.sectionType);
+      
       if (similarity >= threshold) {
+        console.log('✅ [VectorStore] Chunk PASSED threshold!');
         results.push({
           chunk,
           score: similarity,
           relevance: this.getRelevanceLevel(similarity)
         });
+      } else {
+        console.log('❌ [VectorStore] Chunk FAILED threshold (', similarity.toFixed(3), '<', threshold, ')');
       }
     }
 
+    console.log('📊 [VectorStore] Similarity range:', minSimilarity.toFixed(3), 'to', maxSimilarity.toFixed(3));
+    console.log('📦 [VectorStore] Results before sort:', results.length);
+
     // Sort by score descending and take top K
     results.sort((a, b) => b.score - a.score);
-    return results.slice(0, topK);
+    const finalResults = results.slice(0, topK);
+    
+    console.log('📦 [VectorStore] Final results after topK:', finalResults.length);
+    if (finalResults.length > 0) {
+      console.log('✅ [VectorStore] Top result score:', finalResults[0].score.toFixed(3));
+    }
+    
+    return finalResults;
   }
 
   /**
