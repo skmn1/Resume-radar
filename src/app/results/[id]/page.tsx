@@ -105,16 +105,33 @@ export default function ResultsPage() {
   const handleGenerateCoverLetter = async () => {
     if (!analysis || !token) return;
     
+    // Check if required data is available
+    if (!analysis.resumeText) {
+      alert('Resume text is not available. This analysis was created before resume text storage was implemented. Please re-upload your resume to enable cover letter generation.');
+      return;
+    }
+    
+    if (!analysis.jobDescription) {
+      alert('Job description is missing. Please re-upload your resume with a job description to enable cover letter generation.');
+      return;
+    }
+    
     setGeneratingCoverLetter(true);
     try {
       const request: CoverLetterRequest = {
-        resumeText: analysis.resumeText || '',
-        jobDescription: analysis.jobDescription || '',
+        resumeText: analysis.resumeText,
+        jobDescription: analysis.jobDescription,
         candidateName: user?.name || 'Applicant',
         candidateEmail: user?.email,
         analysisId: analysis.id,
         jobMatchResult: analysis.jobMatchResult
       };
+
+      console.log('📤 Sending cover letter request:', {
+        resumeTextLength: request.resumeText.length,
+        jobDescriptionLength: request.jobDescription.length,
+        candidateName: request.candidateName
+      });
 
       const response = await fetch('/api/cover-letter', {
         method: 'POST',
@@ -128,12 +145,14 @@ export default function ResultsPage() {
       const data = await response.json();
 
       if (response.ok) {
+        console.log('✅ Cover letter generated successfully');
         setCoverLetterContent(data.content);
         setCoverLetterSuggestions(data.suggestions || []);
         setCoverLetterSkills(data.highlightedSkills || []);
         setShowCoverLetter(true);
       } else {
-        alert(`Failed to generate cover letter: ${data.error}`);
+        console.error('❌ Cover letter generation failed:', data);
+        alert(`Failed to generate cover letter: ${data.error}\n\nDetails: ${data.details || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Cover letter generation error:', error);
@@ -284,12 +303,18 @@ export default function ResultsPage() {
                     <p className="text-slate-600 dark:text-slate-400 mt-1">
                       Generate a professional, tailored cover letter for this position
                     </p>
+                    {!analysis.resumeText && (
+                      <p className="text-orange-600 dark:text-orange-400 mt-2 text-sm">
+                        ⚠️ Note: Resume text not available. Please re-upload to enable cover letter generation.
+                      </p>
+                    )}
                   </div>
                   {!showCoverLetter && (
                     <Button 
                       onClick={handleGenerateCoverLetter}
-                      disabled={generatingCoverLetter}
+                      disabled={generatingCoverLetter || !analysis.resumeText}
                       className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                      title={!analysis.resumeText ? 'Resume text not available - please re-upload resume' : ''}
                     >
                       {generatingCoverLetter ? '⏳ Generating...' : '✨ Generate Cover Letter'}
                     </Button>
