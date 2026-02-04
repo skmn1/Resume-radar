@@ -1,20 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CoverLetterResult } from '@/types/jobMatching';
 
 interface CoverLetterEditorProps {
-  initialContent: CoverLetterResult;
+  initialContent: string;
   onSave?: (content: string) => void;
   onRegenerate?: () => void;
+  isRegenerating?: boolean;
+  suggestions?: string[];
+  highlightedSkills?: string[];
 }
 
 export default function CoverLetterEditor({
   initialContent,
   onSave,
-  onRegenerate
+  onRegenerate,
+  isRegenerating = false,
+  suggestions = [],
+  highlightedSkills = []
 }: CoverLetterEditorProps) {
-  const [content, setContent] = useState(initialContent.content);
+  const [content, setContent] = useState(initialContent || '');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -45,8 +50,8 @@ export default function CoverLetterEditor({
     return () => clearTimeout(timeoutId);
   }, [content, isEditing, handleSave]);
 
-  const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
-  const charCount = content.length;
+  const wordCount = (content || '').split(/\s+/).filter(w => w.length > 0).length;
+  const charCount = (content || '').length;
 
   const getWordCountColor = () => {
     if (wordCount < 250) return 'text-yellow-600';
@@ -73,9 +78,10 @@ export default function CoverLetterEditor({
           {onRegenerate && (
             <button
               onClick={onRegenerate}
-              className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              disabled={isRegenerating}
+              className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-50"
             >
-              🔄 Regenerate
+              {isRegenerating ? '⏳ Regenerating...' : '🔄 Regenerate'}
             </button>
           )}
 
@@ -138,11 +144,11 @@ export default function CoverLetterEditor({
       </div>
 
       {/* Suggestions */}
-      {initialContent.suggestions && initialContent.suggestions.length > 0 && (
+      {suggestions && suggestions.length > 0 && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
           <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">💡 AI Suggestions</h4>
           <ul className="space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
-            {initialContent.suggestions.map((suggestion, index) => (
+            {suggestions.map((suggestion, index) => (
               <li key={index}>• {suggestion}</li>
             ))}
           </ul>
@@ -150,11 +156,11 @@ export default function CoverLetterEditor({
       )}
 
       {/* Highlighted Skills */}
-      {initialContent.highlightedSkills && initialContent.highlightedSkills.length > 0 && (
+      {highlightedSkills && highlightedSkills.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
           <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">🎯 Skills Mentioned</h4>
           <div className="flex flex-wrap gap-2">
-            {initialContent.highlightedSkills.map((skill, index) => (
+            {highlightedSkills.map((skill, index) => (
               <span
                 key={index}
                 className="px-3 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 rounded-full text-sm"

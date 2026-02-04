@@ -37,6 +37,8 @@ export interface CoverLetterRequest {
   jobTitle?: string;
   hiringManagerName?: string;
   additionalContext?: string; // User can add specific things to mention
+  analysisId?: string; // Optional reference to the analysis
+  jobMatchResult?: JobMatchResult; // Optional job match data
 }
 
 export interface CoverLetterSection {
